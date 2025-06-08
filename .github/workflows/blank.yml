@@ -1,0 +1,27 @@
+name: SSH into EC2 and Run Commands
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Set up SSH key
+      run: |
+        echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
+        chmod 600 key.pem
+
+    - name: SSH into EC2 and run commands
+      run: |
+        ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          echo "✅ Logged into EC2"
+          cd /home/${USER}
+          mkdir -p myapp/logs
+          touch myapp/logs/file1.txt
+          echo "Hello from GitHub Actions" > myapp/logs/file1.txt
+          ls -la myapp/logs
+        EOF
