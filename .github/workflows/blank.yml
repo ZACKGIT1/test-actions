@@ -1,4 +1,4 @@
-name: SSH into EC2 and Run Commands
+name: Check & Install Apache on Ubuntu EC2
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  deploy:
+  setup-apache:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,13 +15,25 @@ jobs:
         echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
         chmod 600 key.pem
 
-    - name: SSH into EC2 and run commands
+    - name: SSH into EC2 and install apache2
       run: |
         ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
           echo "✅ Logged into EC2"
-          cd /home/${USER}
-          mkdir -p myapp/logs
-          touch myapp/logs/file1.txt
-          echo "Hello from GitHub Actions" > myapp/logs/file1.txt
-          ls -la myapp/logs
+
+          # Check if Apache is installed
+          if ! dpkg -l | grep -q apache2; then
+            echo "🔍 Apache not found. Installing..."
+            sudo apt-get update -y
+            sudo apt-get install apache2 -y
+          else
+            echo "✅ Apache is already installed"
+          fi
+
+          # Start and enable the service
+          sudo systemctl start apache2
+          sudo systemctl enable apache2
+          sudo systemctl status apache2 --no-pager
+
+          # Confirm Apache is serving a page
+          curl -I http://localhost
         EOF
